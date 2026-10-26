@@ -14,7 +14,8 @@ export interface ProductCardProps {
   compareAtPrice?: string | null;
   image: string;
   isNew?: boolean;
-  slug?: string; // <-- Added slug so it can navigate
+  slug?: string;
+  sku?: string; // optional; falls back to id if not provided
 }
 
 export default function ProductCard({ product, className = "" }: { product: ProductCardProps, className?: string }) {
@@ -47,10 +48,11 @@ export default function ProductCard({ product, className = "" }: { product: Prod
     e.stopPropagation();
     
     addItem({
-      id: product.id,
+      productId: product.id,
       name: product.name,
+      sku: product.sku ?? product.id,
       price: Number(product.price),
-      image: product.image,
+      imageUrl: product.image,
       quantity: 1,
     });
 

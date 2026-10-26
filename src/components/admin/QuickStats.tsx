@@ -3,6 +3,16 @@
 import { ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
 import Link from 'next/link';
 
+// Shape of the stats object passed from DashboardSection
+export interface QuickStatsProps {
+  stats: {
+    revenue: { value: number; pct: number };
+    orders:  { value: number; pct: number };
+    users:   { value: number; pct: number };
+    sold:    { value: number; pct: number };
+  };
+}
+
 // Mock data for Top Products
 const TOP_PRODUCTS = [
   { name: 'Cold-Pressed Olive Oil Soap', sales: 342, total: 500, color: '#5433EB' },
@@ -18,9 +28,7 @@ const RECENT_ORDERS = [
   { id: '#FF-2026-0889', customer: 'Ali Hassan', date: '3 hours ago', total: '$112.20', status: 'completed' },
 ];
 
-// Note: We are keeping the export name "QuickStats" so you don't have to change the imports
-// in your DashboardSection, but it now renders the Activity & Top Selling view.
-export function QuickStats() {
+export function QuickStats({ stats }: QuickStatsProps) {
   return (
     <div className="bg-white rounded-[24px] p-6 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)] flex flex-col h-full">
       

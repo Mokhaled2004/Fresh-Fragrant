@@ -7,11 +7,11 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 export type CartLine = { productId: string; variantId?: string; variantLabel?: string; name: string; sku: string; price: number; imageUrl: string | null; quantity: number };
 type CartContextValue = { 
   items: CartLine[]; 
-  addItem: (item: Omit<CartLine, 'quantity'>) => void; 
+  addItem: (item: Omit<CartLine, 'quantity'> & { quantity?: number }) => void; 
   changeQuantity: (productId: string, quantity: number) => void; 
   removeItem: (productId: string) => void; 
   subtotal: number;
-  clearCart: () => void; // <-- Added clearCart
+  clearCart: () => void;
 };
 const CartContext = createContext<CartContextValue | null>(null);
 const storageKey = 'storefront-cart-v1';
@@ -44,11 +44,18 @@ export default function CartProvider({ children }: { children: React.ReactNode }
 
   const value = useMemo<CartContextValue>(() => ({
     items,
-    addItem: (item) => setItems((current) => { 
-      const found = current.find((entry) => entry.productId === item.productId && entry.variantId === item.variantId); 
-      return found 
-        ? current.map((entry) => entry.productId === item.productId && entry.variantId === item.variantId ? { ...entry, quantity: entry.quantity + 1 } : entry) 
-        : [...current, { ...item, quantity: 1 }]; 
+    addItem: (item) => setItems((current) => {
+      const qty = item.quantity ?? 1;
+      const found = current.find(
+        (entry) => entry.productId === item.productId && entry.variantId === item.variantId
+      );
+      return found
+        ? current.map((entry) =>
+            entry.productId === item.productId && entry.variantId === item.variantId
+              ? { ...entry, quantity: Math.min(99, entry.quantity + qty) }
+              : entry
+          )
+        : [...current, { ...item, quantity: Math.min(99, qty) }];
     }),
     changeQuantity: (lineKey, quantity) => setItems((current) => quantity < 1 
       ? current.filter((entry) => `${entry.productId}:${entry.variantId ?? ''}` !== lineKey) 
@@ -56,7 +63,7 @@ export default function CartProvider({ children }: { children: React.ReactNode }
     ),
     removeItem: (lineKey) => setItems((current) => current.filter((entry) => `${entry.productId}:${entry.variantId ?? ''}` !== lineKey)),
     subtotal: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    clearCart: () => setItems([]), // <-- Added clearCart function
+    clearCart: () => setItems([]),
   }), [items]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
