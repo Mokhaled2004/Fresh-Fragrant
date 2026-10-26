@@ -3,8 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, ShoppingBag, Menu, X, User, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Search, ShoppingBag, Menu, X, User, LogOut, Package, LogIn } from "lucide-react";
 import gsap from "gsap";
 
 import { useCart } from "@/components/cart/CartProvider"; 
@@ -76,11 +76,18 @@ function SignInButton() {
 }
 
 // --- USER PROFILE DROPDOWN ---
-function UserProfile({ user, onOpenProfile }: { user: NonNullable<HeaderClientProps["user"]>, onOpenProfile: () => void }) {
+function UserProfile({ 
+  user, 
+  onOpenProfile,
+  onLogout 
+}: { 
+  user: NonNullable<HeaderClientProps["user"]>, 
+  onOpenProfile: (tab?: "profile" | "orders") => void,
+  onLogout: () => void 
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const router = useRouter();
 
   const displayName = user.name || user.fullName || user.firstName || user.username || user.email?.split("@")[0] || "User";
   const firstName = String(displayName).split(" ")[0];
@@ -102,16 +109,6 @@ function UserProfile({ user, onOpenProfile }: { user: NonNullable<HeaderClientPr
 
   const handleMouseLeave = () => {
     timeoutRef.current = setTimeout(() => setIsOpen(false), 150);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Failed to logout", error);
-    }
   };
 
   return (
@@ -137,17 +134,28 @@ function UserProfile({ user, onOpenProfile }: { user: NonNullable<HeaderClientPr
               <button 
                 onClick={() => {
                   setIsOpen(false);
-                  onOpenProfile();
+                  onOpenProfile("profile");
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full text-left"
+                className="flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full text-left cursor-pointer"
               >
                 <User className="w-4 h-4" />
                 My Profile
               </button>
 
               <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left"
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenProfile("orders");
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full text-left cursor-pointer"
+              >
+                <Package className="w-4 h-4" />
+                My Orders
+              </button>
+
+              <button 
+                onClick={onLogout}
+                className="flex items-center gap-2 px-3 py-2 text-[13px] text-red-600 hover:bg-red-50 rounded-lg transition-colors w-full text-left cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
@@ -163,18 +171,30 @@ function UserProfile({ user, onOpenProfile }: { user: NonNullable<HeaderClientPr
 // --- MAIN HEADER ---
 export default function HeaderClient({ user }: HeaderClientProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const navRef = useRef<HTMLElement>(null);
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileTab, setProfileTab] = useState<"profile" | "orders" | "wishlist">("profile");
 
   const searchInputContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { items } = useCart();
   const cartCount = items.reduce((total, item) => total + item.quantity, 0);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to logout", error);
+    }
+  };
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -251,7 +271,11 @@ export default function HeaderClient({ user }: HeaderClientProps) {
           {user ? (
             <UserProfile 
               user={user} 
-              onOpenProfile={() => setIsProfileOpen(true)} 
+              onOpenProfile={(tab) => {
+                if (tab) setProfileTab(tab);
+                setIsProfileOpen(true);
+              }} 
+              onLogout={handleLogout}
             />
           ) : (
             <SignInButton />
@@ -269,6 +293,7 @@ export default function HeaderClient({ user }: HeaderClientProps) {
           isOpen={isProfileOpen} 
           onClose={() => setIsProfileOpen(false)} 
           user={user} 
+          initialTab={profileTab}
         />
       )}
 
@@ -283,18 +308,91 @@ export default function HeaderClient({ user }: HeaderClientProps) {
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="relative w-4/5 max-w-sm h-full bg-white p-6 flex flex-col z-10 shadow-2xl">
-              <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} className="relative w-4/5 max-w-sm h-full bg-white p-6 flex flex-col z-10 shadow-2xl overflow-y-auto">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 shrink-0">
                 <span className="font-bold text-[18px] text-black">Menu</span>
-                <button onClick={() => setIsMobileMenuOpen(false)}><X className="w-5 h-5 text-gray-500" /></button>
+                <button onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu" className="p-1 -mr-1 rounded-full text-gray-500 hover:text-black">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <nav className="flex flex-col gap-2">
+
+              <nav className="flex flex-col gap-1.5 shrink-0">
                 {navLinks.map((link) => (
-                  <Link key={link.name} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className={`px-4 py-3 rounded-xl text-[14px] font-medium transition-colors ${pathname === link.href ? "bg-[var(--theme-accentSubtle)] text-[var(--theme-accent)]" : "text-gray-600 hover:bg-gray-50"}`}>
+                  <Link key={link.name} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className={`px-4 py-3 rounded-xl text-[14px] font-medium transition-colors ${pathname === link.href ? "bg-[var(--theme-accentSubtle)] text-[var(--theme-accent)]" : "text-gray-700 hover:bg-gray-50"}`}>
                     {link.name}
                   </Link>
                 ))}
               </nav>
+
+              {/* User Account Section on Mobile */}
+              <div className="mt-auto pt-6 border-t border-gray-100 shrink-0">
+                {user ? (
+                  <div className="flex flex-col gap-1">
+                    <div className="px-3 pb-3 mb-2 border-b border-gray-100">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-gray-400">Account</p>
+                      <p className="text-[14px] font-semibold text-black truncate mt-0.5">
+                        {user.fullName || user.name || user.firstName || user.email?.split("@")[0] || "User"}
+                      </p>
+                      {user.email && (
+                        <p className="text-[12px] text-gray-400 truncate mt-0.5">{user.email}</p>
+                      )}
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setProfileTab("profile");
+                        setIsProfileOpen(true);
+                      }}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-medium text-gray-700 hover:bg-gray-50 hover:text-black transition-colors w-full text-left cursor-pointer"
+                    >
+                      <User className="w-4 h-4 text-gray-500" />
+                      <span>Profile</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setProfileTab("orders");
+                        setIsProfileOpen(true);
+                      }}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-medium text-gray-700 hover:bg-gray-50 hover:text-black transition-colors w-full text-left cursor-pointer"
+                    >
+                      <Package className="w-4 h-4 text-gray-500" />
+                      <span>Orders</span>
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-medium text-red-600 hover:bg-red-50 transition-colors w-full text-left cursor-pointer mt-1"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-[#5433EB] hover:bg-[#4524DB] text-white text-[14px] font-medium transition-colors shadow-sm"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span>Sign In</span>
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center justify-center px-4 py-2.5 rounded-full border border-gray-200 text-gray-700 text-[13px] font-medium hover:bg-gray-50 transition-colors text-center"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

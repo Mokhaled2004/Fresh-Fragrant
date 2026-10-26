@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
+  --color-white: #ffffff;
+  --color-black: #000000;
   --font-sans: var(--theme-font-sans);
   --font-shopify-sans: var(--theme-font-shopify-sans);
   --font-mono: var(--theme-font-mono);

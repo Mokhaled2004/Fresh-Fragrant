@@ -19,6 +19,7 @@ interface ProfileDrawerProps {
     createdAt?: string | Date;
     [key: string]: any 
   };
+  initialTab?: "profile" | "orders" | "wishlist";
 }
 
 const MOCK_ORDERS = [
@@ -50,10 +51,18 @@ const MOCK_WISHLIST = [
   { id: "wish-2", name: "Organic Bamboo Soap Dish", price: "8.99", imageUrl: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=200&auto=format&fit=crop" }
 ];
 
-export default function ProfileDrawer({ isOpen, onClose, user }: ProfileDrawerProps) {
-  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "wishlist">("profile");
+export default function ProfileDrawer({ isOpen, onClose, user, initialTab = "profile" }: ProfileDrawerProps) {
+  const [activeTab, setActiveTab] = useState<"profile" | "orders" | "wishlist">(initialTab);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<typeof MOCK_ORDERS[0] | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+      setIsEditing(false);
+      setSelectedOrder(null);
+    }
+  }, [isOpen, initialTab]);
   
   // Order Filters
   const [orderSearch, setOrderSearch] = useState("");
